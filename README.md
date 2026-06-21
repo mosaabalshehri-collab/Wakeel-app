@@ -26,15 +26,15 @@
 - إشعارات فورية (Toast) لنتيجة كل عملية، وتحذير قبل مغادرة فورم فيه
   تعديلات غير محفوظة
 
-## الستاك التقني
+## Tech Stack
 
-| الطبقة | التقنية | السبب |
+| Layer | Technology | Reason |
 |---|---|---|
-| Frontend | Next.js 15 (App Router) + TypeScript + Tailwind CSS | مشروع واحد متكامل، سهل النشر، شائع في سوق العمل |
-| Backend | Next.js API Routes | لا حاجة لسيرفر منفصل |
-| قاعدة البيانات | SQLite عبر `node:sqlite` (مدمجة في Node.js 22+) | صفر اعتماديات native، تعمل فوراً على أي جهاز |
-| المصادقة | JWT (jsonwebtoken) + bcrypt | بسيطة وموثوقة لمشروع بهذا الحجم |
-| التحقق من المدخلات | Zod | فحص صارم لكل بيانات الفورم في الـ API |
+| Frontend | Next.js 15 (App Router) + TypeScript + Tailwind CSS | Full-stack project in one codebase, easy to deploy, in-demand stack |
+| Backend | Next.js API Routes | No need for a separate server |
+| Database | SQLite via `node:sqlite` (built into Node.js 22+) | Zero native dependencies, works instantly on any machine |
+| Authentication | JWT (jsonwebtoken) + bcrypt | Simple and reliable for this project's scale |
+| Validation | Zod | Strict validation of all form data at the API level |Zod | فحص صارم لكل بيانات الفورم في الـ API |
 
 ### لماذا SQLite بدل PostgreSQL؟
 
