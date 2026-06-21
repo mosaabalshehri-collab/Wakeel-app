@@ -1,0 +1,121 @@
+@import "tailwindcss";
+
+/* نخصص متغير "dark" ليتبع كلاس .dark على <html> بدل media query
+   الافتراضية في Tailwind v4 (prefers-color-scheme مباشرة) — هذا
+   ضروري لدعم التبديل اليدوي عبر ThemeToggle، وليس فقط تتبع النظام */
+@custom-variant dark (&:where(.dark, .dark *));
+
+:root {
+  /* الألوان الأساسية - مستوحاة من هوية منصة ناجز: أخضر زاهي رسمي + ذهبي،
+     خلفية فاتحة نظيفة بدل الداكن */
+  --color-ink: #1A1A1A;
+  --color-primary: #00754A;
+  --color-primary-dark: #005C3A;
+  --color-primary-light: #E6F4EE;
+  --color-gold: #C9A24B;
+  --color-gold-light: #FBF1E4;
+  --color-paper: #FFFFFF;
+  --color-paper-raised: #FFFFFF;
+  --color-surface: #F7F8F7;
+  --color-border: #E5E7E5;
+
+  /* الأخضر الداكن القديم محفوظ كاسم بديل للتوافق مع الكود الحالي
+     (الهيدر وبعض العناصر تستخدمه كلون نص/خلفية أساسي) */
+  --color-ink-dark: #0E2A20;
+  --color-ink-light: #00754A;
+
+  /* ألوان حالة الوكالة - جوهر المنتج، لازم تكون واضحة جداً */
+  --color-status-active: #00754A;
+  --color-status-active-bg: #E6F4EE;
+  --color-status-warning: #B8762E;
+  --color-status-warning-bg: #FBF1E4;
+  --color-status-expired: #C0392B;
+  --color-status-expired-bg: #FBEAEA;
+  --color-status-cancelled: #6B6358;
+  --color-status-cancelled-bg: #EFEDE8;
+
+  --background: var(--color-surface);
+  --foreground: var(--color-ink);
+}
+
+/*
+ * الوضع الداكن (Dark Mode)
+ *
+ * يُفعَّل عبر إضافة class="dark" على وسم <html> (انظر
+ * src/lib/theme.ts وsrc/components/ThemeToggle.tsx). كل متغير هنا
+ * يبقى بنفس الاسم، فباقي الكود (inline styles وTailwind classes)
+ * لا يحتاج أي تعديل — التبديل يحصل تلقائياً لأن كل مكان في المشروع
+ * يستخدم var(--color-*) بدل قيم لون ثابتة.
+ *
+ * ليست انعكاساً حرفياً للألوان الفاتحة (لا نستبدل أبيض بأسود مباشرة)
+ * بل لوحة مصممة خصيصاً لراحة القراءة في الإضاءة المنخفضة: رمادي داكن
+ * دافئ بدل أسود صافٍ، وألوان الحالة (أخضر/أحمر/ذهبي) مرفوعة الإضاءة
+ * قليلاً للحفاظ على التباين الكافي على خلفية داكنة.
+ */
+.dark {
+  --color-ink: #EDEDEC;
+  --color-primary: #2FAF7C;
+  --color-primary-dark: #4AC795;
+  --color-primary-light: #103A2B;
+  --color-gold: #D9B567;
+  --color-gold-light: #2E2614;
+  --color-paper: #1C1F1E;
+  --color-paper-raised: #232726;
+  --color-surface: #16181A;
+  --color-border: #34383A;
+
+  --color-ink-dark: #EDEDEC;
+  --color-ink-light: #2FAF7C;
+
+  --color-status-active: #3FC08A;
+  --color-status-active-bg: #143226;
+  --color-status-warning: #E0A857;
+  --color-status-warning-bg: #332710;
+  --color-status-expired: #E5685D;
+  --color-status-expired-bg: #3A1816;
+  --color-status-cancelled: #A39C90;
+  --color-status-cancelled-bg: #2A2826;
+
+  --background: var(--color-surface);
+  --foreground: var(--color-ink);
+
+  color-scheme: dark;
+}
+
+/* نربط متغيرات Tailwind theme (بادئة مختلفة لتفادي التعريف الدائري) بمتغيرات :root أعلاه،
+   عشان نقدر نستخدم نفس القيم سواء عبر Tailwind classes أو inline styles */
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-brand-ink: var(--color-ink);
+  --color-brand-ink-light: var(--color-primary);
+  --color-brand-paper: var(--color-paper);
+  --color-brand-paper-raised: var(--color-paper-raised);
+  --color-brand-gold: var(--color-gold);
+  --color-brand-border: var(--color-border);
+  --font-sans: "IBM Plex Sans Arabic", "Segoe UI", Tahoma, Arial, sans-serif;
+  --font-mono: "IBM Plex Mono", "Courier New", monospace;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+}
+
+/* خلفية زخرفية بنقاط خفيفة، مستوحاة من صفحة ناجز الرئيسية */
+.dotted-bg {
+  background-image: radial-gradient(circle, #00754A14 1.5px, transparent 1.5px);
+  background-size: 22px 22px;
+}
+
+.dark .dotted-bg {
+  background-image: radial-gradient(circle, #2FAF7C22 1.5px, transparent 1.5px);
+}
+
+/* أرقام الوكالات والتواريخ تستخدم خط ثابت العرض لسهولة القراءة والمحاذاة */
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+
+

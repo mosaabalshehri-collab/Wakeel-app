@@ -1,0 +1,53 @@
+# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+
+# dependencies
+/node_modules
+/.pnp
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/versions
+
+# testing
+/coverage
+
+# next.js
+/.next/
+/out/
+
+# production
+/build
+
+# misc
+.DS_Store
+*.pem
+
+# debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# env files (can opt-in for committing if needed)
+.env*
+
+# database (SQLite local dev file)
+/data/*.db
+/data/*.db-journal
+
+# ملفات الوكالات المرفوعة (لا تُحفظ في git، خاصة بكل بيئة تشغيل)
+/data/uploads/*
+!/data/uploads/.gitkeep
+
+# نسخ قاعدة البيانات الاحتياطية (راجع src/lib/backup.ts)
+/data/backups/*
+!/data/backups/.gitkeep
+
+# vercel
+.vercel
+
+# typescript
+*.tsbuildinfo
+next-env.d.ts
