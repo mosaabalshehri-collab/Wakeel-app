@@ -69,6 +69,9 @@ export async function POST(request: NextRequest) {
   // لو فشل الإرسال (مثلاً خدمة البريد غير مفعّلة بعد أثناء التطوير)
   // — المستخدم يقدر يطلب إعادة الإرسال لاحقاً من حسابه
   try {
+    // إبطال أي توكنات تأكيد سابقة لنفس المستخدم قبل إصدار توكن جديد،
+    // اتساقاً مع باقي تدفقات إصدار التوكنات (forgot-password وresend)
+    tokenRepo.invalidatePrevious(user.id, "email_verify");
     const verifyToken = tokenRepo.create(user.id, "email_verify");
     const verifyUrl = `${request.nextUrl.origin}/verify-email?token=${verifyToken.token}`;
     const { subject, html } = buildVerificationEmail(verifyUrl);

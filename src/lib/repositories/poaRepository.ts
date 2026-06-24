@@ -12,6 +12,8 @@ export { TRASH_RETENTION_DAYS } from "./createPoaRepository";
 const repo = createPoaRepository(db);
 
 export const findAllByUser = repo.findAllByUser;
+export const findByUserFiltered = repo.findByUserFiltered;
+export const countByUser = repo.countByUser;
 export const findById = repo.findById;
 export const findDeletedByUser = repo.findDeletedByUser;
 export const findDeletedById = repo.findDeletedById;

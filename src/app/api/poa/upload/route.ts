@@ -3,6 +3,7 @@ import { writeFile, mkdir } from "node:fs/promises";
 import path from "node:path";
 import crypto from "node:crypto";
 import { withAuth } from "@/lib/withAuth";
+import { enforceEmailVerified } from "@/lib/guards";
 
 // أمان أساسي لرفع الملفات: حد أقصى للحجم ونوع ملفات محدد
 const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024; // 5 ميجابايت
@@ -15,6 +16,9 @@ const ALLOWED_MIME_TYPES: Record<string, string> = {
 const UPLOADS_DIR = path.join(process.cwd(), "data", "uploads");
 
 export const POST = withAuth(async (request, auth) => {
+  const verifyBlock = enforceEmailVerified(auth.userId);
+  if (verifyBlock) return verifyBlock;
+
   const formData = await request.formData();
   const file = formData.get("file");
 

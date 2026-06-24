@@ -64,8 +64,26 @@ export function checkRateLimit(
   return { allowed: true, retryAfterSeconds: 0 };
 }
 
-/** يستخرج عنوان IP الأقرب للمصدر الفعلي من رؤوس الطلب القياسية خلف proxy */
+/**
+ * يستخرج عنوان IP العميل لاستخدامه في مفتاح الـ rate limiting.
+ *
+ * تحذير أمني: رؤوس مثل x-forwarded-for يستطيع العميل تزويرها بنفسه،
+ * فيرسل قيمة مختلفة كل طلب ويتجاوز حد المحاولات. لذلك نثق بها فقط
+ * عندما نعرف أن التطبيق منشور خلف بروكسي/منصة موثوقة تعيد كتابة هذا
+ * الرأس (مثل Vercel أو Nginx مضبوط بشكل صحيح) — ويُفعّل ذلك صراحة
+ * عبر متغير البيئة TRUST_PROXY=true.
+ *
+ * إن لم يكن TRUST_PROXY مفعّلاً، نتجاهل الرؤوس القابلة للتزوير
+ * ونرجع مفتاحاً ثابتاً، فيصبح الحد عاماً (أصرم) بدل أن يكون قابلاً
+ * للالتفاف عبر تزوير IP. الأمان هنا أهم من الدقة.
+ */
+const TRUST_PROXY = process.env.TRUST_PROXY === "true";
+
 export function getClientIp(request: Request): string {
+  if (!TRUST_PROXY) {
+    // لا نثق بأي رأس قابل للتزوير. مفتاح ثابت = حد عام صارم.
+    return "shared";
+  }
   const forwardedFor = request.headers.get("x-forwarded-for");
   if (forwardedFor) return forwardedFor.split(",")[0].trim();
   const realIp = request.headers.get("x-real-ip");

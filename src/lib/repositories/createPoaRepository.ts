@@ -288,31 +288,128 @@ export function createPoaRepository(db: DatabaseSync) {
     return attachmentPaths;
   }
 
+  // خيارات تصفية قائمة الوكالات. كلها اختيارية.
+  interface FindFilters {
+    status?: string; // الحالة الفعلية المطلوبة: active | expired | cancelled
+    type?: string; // نوع الوكالة
+    search?: string; // بحث نصّي في رقم الوكالة واسم الموكِّل والوكيل
+  }
+
+  // يهرّب محارف LIKE الخاصة (% _ \) حتى يتعامل بحث المستخدم كنص حرفي
+  // لا كنمط، مع استخدام ESCAPE '\' في الاستعلام
+  function escapeLike(value: string): string {
+    return value.replace(/[\\%_]/g, (ch) => `\\${ch}`);
+  }
+
+  /**
+   * يجلب وكالات المستخدم مع تطبيق التصفية على مستوى قاعدة البيانات
+   * مباشرة بدل جلب كل الصفوف وتصفيتها في الذاكرة. الحالة الفعلية
+   * (active/expired) تُحسب في SQL بنفس منطق computeEffectiveStatus:
+   * وكالة status='active' لكن تاريخ انتهائها مضى تُعدّ "منتهية".
+   */
+  function findByUserFiltered(
+    userId: number,
+    filters: FindFilters = {}
+  ): PowerOfAttorney[] {
+    const today = new Date().toISOString().slice(0, 10);
+    const conditions: string[] = ["user_id = ?", "deleted_at IS NULL"];
+    const args: unknown[] = [userId];
+
+    if (filters.status === "active") {
+      conditions.push(
+        "status = 'active' AND (expiry_date IS NULL OR expiry_date >= ?)"
+      );
+      args.push(today);
+    } else if (filters.status === "expired") {
+      conditions.push(
+        "(status = 'expired' OR (status = 'active' AND expiry_date IS NOT NULL AND expiry_date < ?))"
+      );
+      args.push(today);
+    } else if (filters.status === "cancelled") {
+      conditions.push("status = 'cancelled'");
+    }
+
+    if (filters.type) {
+      conditions.push("poa_type = ?");
+      args.push(filters.type);
+    }
+
+    if (filters.search) {
+      const like = `%${escapeLike(filters.search.toLowerCase())}%`;
+      conditions.push(
+        `(LOWER(poa_number) LIKE ? ESCAPE '\\'
+          OR LOWER(principal_name) LIKE ? ESCAPE '\\'
+          OR LOWER(agent_name) LIKE ? ESCAPE '\\')`
+      );
+      args.push(like, like, like);
+    }
+
+    const stmt = db.prepare(
+      `SELECT * FROM power_of_attorneys
+       WHERE ${conditions.join(" AND ")}
+       ORDER BY created_at DESC`
+    );
+    const rows = stmt.all(...(args as never[])) as unknown as PoaRow[];
+    return rows.map(mapRow).map(computeEffectiveStatus);
+  }
+
+  /** عدد وكالات المستخدم النشطة (غير المحذوفة) — يُستخدم لفرض حد لكل مستخدم */
+  function countByUser(userId: number): number {
+    const stmt = db.prepare(
+      `SELECT COUNT(*) AS n FROM power_of_attorneys
+       WHERE user_id = ? AND deleted_at IS NULL`
+    );
+    const row = stmt.get(userId) as unknown as { n: number };
+    return row.n;
+  }
+
   function getStats(userId: number): PoaStats {
-    const all = findAllByUser(userId);
     const today = new Date();
     const in30Days = new Date(today);
     in30Days.setDate(in30Days.getDate() + 30);
     const todayStr = today.toISOString().slice(0, 10);
     const in30Str = in30Days.toISOString().slice(0, 10);
 
+    // حساب الإحصائيات في استعلام واحد عبر SQL بدل جلب كل الصفوف
+    // وعدّها في الذاكرة. منطق "expired" و"active" يطابق
+    // computeEffectiveStatus بالضبط.
+    const stmt = db.prepare(`
+      SELECT
+        COUNT(*) AS total,
+        SUM(CASE WHEN status = 'active' AND (expiry_date IS NULL OR expiry_date >= ?) THEN 1 ELSE 0 END) AS active,
+        SUM(CASE WHEN status = 'expired' OR (status = 'active' AND expiry_date IS NOT NULL AND expiry_date < ?) THEN 1 ELSE 0 END) AS expired,
+        SUM(CASE WHEN status = 'cancelled' THEN 1 ELSE 0 END) AS cancelled,
+        SUM(CASE WHEN status = 'active' AND expiry_date IS NOT NULL AND expiry_date >= ? AND expiry_date <= ? THEN 1 ELSE 0 END) AS expiringSoon
+      FROM power_of_attorneys
+      WHERE user_id = ? AND deleted_at IS NULL
+    `);
+    const row = stmt.get(
+      todayStr,
+      todayStr,
+      todayStr,
+      in30Str,
+      userId
+    ) as unknown as {
+      total: number;
+      active: number | null;
+      expired: number | null;
+      cancelled: number | null;
+      expiringSoon: number | null;
+    };
+
     return {
-      total: all.length,
-      active: all.filter((p) => p.status === "active").length,
-      expired: all.filter((p) => p.status === "expired").length,
-      cancelled: all.filter((p) => p.status === "cancelled").length,
-      expiringSoon: all.filter(
-        (p) =>
-          p.status === "active" &&
-          p.expiryDate &&
-          p.expiryDate >= todayStr &&
-          p.expiryDate <= in30Str
-      ).length,
+      total: row.total,
+      active: row.active ?? 0,
+      expired: row.expired ?? 0,
+      cancelled: row.cancelled ?? 0,
+      expiringSoon: row.expiringSoon ?? 0,
     };
   }
 
   return {
     findAllByUser,
+    findByUserFiltered,
+    countByUser,
     findById,
     findDeletedByUser,
     findDeletedById,

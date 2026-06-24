@@ -3,32 +3,30 @@ import { withAuth } from "@/lib/withAuth";
 import * as poaRepo from "@/lib/repositories/poaRepository";
 import * as activityRepo from "@/lib/repositories/activityRepository";
 import { createPoaSchema } from "@/lib/validation/schemas";
+import { enforceEmailVerified, enforcePoaQuota } from "@/lib/guards";
 
 export const GET = withAuth((request, auth) => {
-  const poas = poaRepo.findAllByUser(auth.userId);
-
-  // فلترة اختيارية عبر query params
+  // التصفية تتم على مستوى قاعدة البيانات (لا في الذاكرة): نمرر
+  // معاملات الاستعلام مباشرة إلى الـ repository فيبني SQL مناسباً
+  // ويعيد فقط الصفوف المطلوبة.
   const { searchParams } = new URL(request.url);
-  const status = searchParams.get("status");
-  const type = searchParams.get("type");
-  const search = searchParams.get("search")?.toLowerCase();
+  const poas = poaRepo.findByUserFiltered(auth.userId, {
+    status: searchParams.get("status") ?? undefined,
+    type: searchParams.get("type") ?? undefined,
+    search: searchParams.get("search") ?? undefined,
+  });
 
-  let filtered = poas;
-  if (status) filtered = filtered.filter((p) => p.status === status);
-  if (type) filtered = filtered.filter((p) => p.poaType === type);
-  if (search) {
-    filtered = filtered.filter(
-      (p) =>
-        p.poaNumber.toLowerCase().includes(search) ||
-        p.principalName.toLowerCase().includes(search) ||
-        p.agentName.toLowerCase().includes(search)
-    );
-  }
-
-  return NextResponse.json({ poas: filtered });
+  return NextResponse.json({ poas });
 });
 
 export const POST = withAuth(async (request, auth) => {
+  // حاجز تأكيد البريد (إن كان مفعّلاً) ثم حد عدد الوكالات لكل مستخدم
+  const verifyBlock = enforceEmailVerified(auth.userId);
+  if (verifyBlock) return verifyBlock;
+
+  const quotaBlock = enforcePoaQuota(auth.userId);
+  if (quotaBlock) return quotaBlock;
+
   let body: unknown;
   try {
     body = await request.json();
